@@ -5,11 +5,63 @@
 
 using namespace std;
 
+void client_init();
+void client_connect();
+void client_terminate();
+
+string IPADDRESS = "10.25.140.33";	// IP for the server
+int PORT = 4321;		// Port for the server
+SOCKET sock;
+
 void main()
 {
-	string ipAddress = "192.168.1.173";	// IP for the server
-	int port = 4321;		// Port for the server
+	// Initialize the client socket
+	client_init();
 
+	// Connet to the server
+	client_connect();
+	
+	// Do-while loop to send and receive message
+	char buf[4096];
+	string userInput;
+
+
+	do
+	{
+		// Promet the user for some text
+		cout << "> ";
+		getline(cin, userInput);
+		userInput = userInput + "\n";
+
+		// Send the text
+		if (userInput.size() > 0) // Make sure the user has typed in something
+		{
+			int sendResult = send(sock, userInput.c_str(), userInput.size() + 1, 0);
+			if (sendResult != SOCKET_ERROR)
+			{
+				// Wait for result
+				//ZeroMemory(buf, 4096);
+				//int bytesReceived = recv(sock, buf, 4096, 0);
+				//cout << "send " << bytesReceived << endl;
+				//if (bytesReceived > 0)
+				//{
+				//	// Echo response to concole
+				//	cout << "SERVER> " << string(buf, 0, bytesReceived) << endl;
+				//}
+			}
+		}
+
+
+
+	} while (userInput.size() > 0);
+
+	// Terminate the client socket and connection
+	client_terminate();
+
+}
+
+void client_init()
+{
 	// Initialize WinSock
 	WSADATA data;
 	WORD ver = MAKEWORD(2, 2);
@@ -21,7 +73,7 @@ void main()
 	}
 
 	// Create socket
-	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET)
 	{
 		cerr << "Can't create socket, Err #" << sock << endl;
@@ -29,13 +81,15 @@ void main()
 		return;
 	}
 
+}
 
+void client_connect()
+{
 	// Fill in a hint structure
 	sockaddr_in hint;
 	hint.sin_family = AF_INET;
-	hint.sin_port = htons(port);
-	inet_pton(AF_INET, ipAddress.c_str(),&hint.sin_addr);
-
+	hint.sin_port = htons(PORT);
+	inet_pton(AF_INET, IPADDRESS.c_str(), &hint.sin_addr);
 
 	// Connect to the server
 	int connResult = connect(sock, (sockaddr*)&hint, sizeof(hint));
@@ -46,37 +100,14 @@ void main()
 		WSACleanup();
 		return;
 	}
-
-	// Do-while loop to send and receive message
-	char buf[4096];
-	string userInput;
-
-	do
+	else
 	{
-		// Promet the user for some text
-		cout << "> ";
-		getline(cin, userInput);
+		cout << "Connected!" << endl;
+	}
+}
 
-		// Send the text
-		if (userInput.size() > 0) // Make sure the user has typed in something
-		{
-			int sendResult = send(sock, userInput.c_str(), userInput.size() + 1, 0);
-			if (sendResult != SOCKET_ERROR)
-			{
-				// Wait for result
-				ZeroMemory(buf, 4096);
-				int bytesReceived = recv(sock, buf, 4096, 0);
-				if (bytesReceived > 0)
-				{
-					// Echo response to concole
-					cout << "SERVER> " << string(buf, 0, bytesReceived) << endl;
-				}
-			}
-		}
-		
-
-	} while (userInput.size() > 0);
-
+void client_terminate()
+{
 	// Gracefully close down everything
 	closesocket(sock);
 	WSACleanup();
