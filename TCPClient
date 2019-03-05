@@ -1,6 +1,7 @@
 #include <iostream>
 #include <WS2tcpip.h>
 #include <string>
+#include <thread> // std::thread
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -8,6 +9,8 @@ using namespace std;
 void client_init();
 void client_connect();
 void client_terminate();
+void client_sender();
+void client_receiver();
 
 string IPADDRESS = "10.25.140.33";	// IP for the server
 int PORT = 4321;		// Port for the server
@@ -15,50 +18,86 @@ SOCKET sock;
 
 void main()
 {
-	// Initialize the client socket
-	client_init();
+	// Activate the client_send thread
+	thread th_sender (client_sender);
+	thread th_receiver(client_receiver);
+	th_receiver.join();
 
-	// Connet to the server
-	client_connect();
-	
-	// Do-while loop to send and receive message
+
+
+}
+
+void client_sender()
+{
 	char buf[4096];
 	string userInput;
+	
+	
+	// Initialize the client
+	client_init();
 
+	// Connect to the server
+	client_connect();
 
+	// Send the message if necessary
 	do
 	{
+		userInput = "hello";
 		// Promet the user for some text
-		cout << "> ";
-		getline(cin, userInput);
+		//cout << "> ";
+		//getline(cin, userInput);
 		userInput = userInput + "\n";
 
 		// Send the text
 		if (userInput.size() > 0) // Make sure the user has typed in something
 		{
 			int sendResult = send(sock, userInput.c_str(), userInput.size() + 1, 0);
-			if (sendResult != SOCKET_ERROR)
-			{
-				// Wait for result
-				//ZeroMemory(buf, 4096);
-				//int bytesReceived = recv(sock, buf, 4096, 0);
-				//cout << "send " << bytesReceived << endl;
-				//if (bytesReceived > 0)
-				//{
-				//	// Echo response to concole
-				//	cout << "SERVER> " << string(buf, 0, bytesReceived) << endl;
-				//}
-			}
 		}
 
-
+		// Sleep the thread for a particular time (in ms)
+		std::chrono::milliseconds ms(1000);
+		std::this_thread::sleep_for(ms);
 
 	} while (userInput.size() > 0);
 
-	// Terminate the client socket and connection
 	client_terminate();
 
 }
+
+void client_receiver()
+{
+	cout << "client_receiver created." << endl;
+	char buf[4096];
+
+
+	// Initialize the client
+	client_init();
+
+	// Connect to the server
+	client_connect();
+
+	// Wait for the message
+	while (true)
+	{
+		int bytesReceived = recv(sock, buf, 4096, 0); // The number of bytes received
+		if (bytesReceived == SOCKET_ERROR)
+		{
+			cerr << "Error in recv(). Quitting" << endl;
+		}
+		if (bytesReceived == 0)
+		{
+			cout << "Client disconnected" << endl;
+		}
+
+		// Print out the received message
+		cout << "Server: " << buf << endl;
+	}
+
+	// Terminate thread
+	client_terminate();
+	
+}
+
 
 void client_init()
 {
